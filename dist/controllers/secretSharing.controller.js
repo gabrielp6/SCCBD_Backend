@@ -23,18 +23,25 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const VotosController = __importStar(require("../controllers/votaciones.controller"));
-const SecretSharingController = __importStar(require("../controllers/secretSharing.controller"));
-const router = (0, express_1.Router)();
-const UrlVotos = '/votos';
-const UrlSecretSharing = '/secretSharing';
-router.get('', VotosController.getResultados);
-router.get(UrlVotos + '/publickey', VotosController.keysVotos);
-router.post(UrlVotos + '/decrypt', VotosController.decryptVotos);
-router.post(UrlVotos + '/sign', VotosController.signVotos);
-router.post(UrlVotos + '/encrypt', VotosController.encryptVotos);
-router.post(UrlVotos + '/verify', VotosController.verifyVotos);
-router.post(UrlSecretSharing + '/getSharingKeys', SecretSharingController.getKeys);
-router.post(UrlSecretSharing + '/recuperarSecreto', SecretSharingController.recuperarSecreto);
-exports.default = router;
+exports.recuperarSecreto = exports.getKeys = void 0;
+const BIC = __importStar(require("bigint-conversion"));
+const secretSharingModule = require('shamirs-secret-sharing');
+const getKeys = async (req, res) => {
+    const secreto = BIC.textToBuf(req.body.secreto);
+    const clavesTotales = secretSharingModule.split(secreto, { shares: 5, threshold: 3 });
+    const clavesCompartidasEnviar = [];
+    clavesTotales.forEach((share) => {
+        clavesCompartidasEnviar.push(BIC.bufToHex(share));
+    });
+    res.json(clavesCompartidasEnviar);
+};
+exports.getKeys = getKeys;
+const recuperarSecreto = async (req, res) => {
+    const clavesRecuperadasRecibidas = req.body.claves;
+    const clavesRecuperadas = [];
+    clavesRecuperadasRecibidas.forEach((shareHex) => {
+        clavesRecuperadas.push(BIC.hexToBuf(shareHex));
+    });
+    res.json(BIC.bufToText(secretSharingModule.combine(clavesRecuperadas)));
+};
+exports.recuperarSecreto = recuperarSecreto;
